@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Data Analyst Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --ink: #12263A; --muted: #5B6B7B; --paper: #F2F5F7; --surface: #FFFFFF;
+  --rule: #D5DCE3; --teal: #0F8B8D; --amber: #D98E04; --danger: #B3402A; --tint: #E8F3F3;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --ink: #E6EDF3; --muted: #9BAABA; --paper: #0E1822; --surface: #14222F;
+          --rule: #2A3B4C; --teal: #35B5B7; --amber: #F0B23A; --danger: #FF8A73; --tint: #17333A; }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--paper); color: var(--ink);
+  font: 400 16px/1.55 "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif; }
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+.top { padding: 18px clamp(16px, 4vw, 48px); border-bottom: 1px solid var(--rule); font-weight: 600; letter-spacing: .01em; }
+main { max-width: 1120px; margin: 0 auto; padding: clamp(20px, 4vw, 48px) clamp(16px, 4vw, 48px) 80px; }
+
+/* Upload */
+.intro-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: clamp(24px, 5vw, 72px); align-items: start; padding-top: 4vh; }
+h1 { font-size: clamp(30px, 4.6vw, 50px); line-height: 1.08; margin: 0 0 16px; font-weight: 600; letter-spacing: -.02em; max-width: 14ch; }
+.lede { color: var(--muted); max-width: 46ch; margin: 0 0 24px; }
+.steps { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--rule); max-width: 46ch; }
+.steps li { padding: 10px 0; border-bottom: 1px solid var(--rule); color: var(--muted); }
+.steps b { color: var(--ink); font-weight: 600; }
+.panel { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 24px; }
+.drop { display: block; border: 1.5px dashed var(--muted); border-radius: 6px; padding: 36px 20px; text-align: center; cursor: pointer; transition: background .15s, border-color .15s; }
+.drop:hover, .drop.over { background: var(--tint); border-color: var(--teal); }
+.drop strong { display: block; font-size: 18px; }
+.drop span { color: var(--muted); font-size: 14px; }
+label.field { display: block; margin: 20px 0 6px; font-weight: 500; font-size: 14px; }
+input[type=text] { width: 100%; padding: 10px 12px; background: var(--paper); border: 1px solid var(--rule); border-radius: 4px; }
+.btn { display: inline-block; padding: 11px 20px; border-radius: 4px; border: 1px solid var(--teal); background: var(--teal); color: #fff; font-weight: 600; cursor: pointer; text-decoration: none; }
+.btn:hover { filter: brightness(1.08); }
+.btn:disabled { opacity: .45; cursor: not-allowed; filter: none; }
+.btn.ghost { background: transparent; color: var(--ink); border-color: var(--rule); }
+#go { margin-top: 20px; width: 100%; }
+.fine { color: var(--muted); font-size: 13px; margin: 14px 0 0; }
+.error { color: var(--danger); font-weight: 500; margin: 14px 0 0; }
+
+/* Loading */
+.loading { max-width: 420px; margin: 18vh auto; text-align: center; }
+.spin { width: 34px; height: 34px; margin: 0 auto 18px; border: 3px solid var(--rule); border-top-color: var(--teal); border-radius: 50%; animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; border-top-color: var(--teal); } }
+
+/* Results */
+.bar { display: flex; flex-wrap: wrap; gap: 12px 24px; justify-content: space-between; align-items: end; padding-bottom: 20px; border-bottom: 1px solid var(--rule); }
+.bar h2 { margin: 0; font-size: 26px; line-height: 1.2; overflow-wrap: anywhere; }
+.bar p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.lead { font-size: clamp(18px, 2.2vw, 22px); line-height: 1.5; max-width: 62ch; margin: 28px 0 6px; }
+.source { color: var(--muted); font-size: 13px; margin: 0 0 24px; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); border: 1px solid var(--rule); background: var(--surface); border-radius: 6px; }
+.kpi { padding: 14px 16px; border-right: 1px solid var(--rule); min-width: 0; }
+.kpi:last-child { border-right: 0; }
+.kpi .l { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.kpi .v { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; line-height: 1.25; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 16px; }
+.chart { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 16px; }
+.chart.wide { grid-column: 1 / -1; }
+.chart h3 { margin: 0 0 10px; font-size: 15px; font-weight: 600; }
+.chart .box { position: relative; height: 260px; }
+.cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px 40px; margin-top: 32px; }
+.cols h3, .section h3 { font-size: 16px; margin: 0 0 8px; }
+ul.plain { margin: 0; padding-left: 20px; }
+ul.plain li { margin-bottom: 8px; }
+.section { margin-top: 32px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { color: var(--muted); font-weight: 500; }
+td.num { font-variant-numeric: tabular-nums; }
+.scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; }
+details summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+
+@media (max-width: 820px) {
+  .intro-grid, .grid, .cols { grid-template-columns: 1fr; }
+  h1 { max-width: none; }
+  .kpi { border-right: 0; border-bottom: 1px solid var(--rule); }
+  .kpi:last-child { border-bottom: 0; }
+}
+</style>
+</head>
+<body>
+<div class="top">Data Analyst Agent</div>
+<main>
+
+  <section id="upload-view">
+    <div class="intro-grid">
+      <div>
+        <h1>Upload a CSV and get a report you can send</h1>
+        <p class="lede">You get a dashboard to explore, a plain-language summary, and a PDF you can download.</p>
+        <ol class="steps">
+          <li><b>Upload</b> any CSV export, such as sales, orders or survey results.</li>
+          <li><b>Ask</b> a question if you have one. It is optional.</li>
+          <li><b>Download</b> the PDF or share the dashboard link.</li>
+        </ol>
+      </div>
+      <form id="form" class="panel" novalidate>
+        <label id="drop" class="drop" for="file" tabindex="0">
+          <strong id="drop-title">Choose a CSV file</strong>
+          <span id="drop-sub">or drop it here. Up to 10 MB.</span>
+        </label>
+        <input id="file" type="file" accept=".csv,text/csv" hidden>
+        <label class="field" for="q">What do you want to know?</label>
+        <input id="q" type="text" maxlength="300" placeholder="For example: which region drives revenue?">
+        <button id="go" class="btn" type="submit" disabled>Analyze file</button>
+        <p id="error" class="error" role="alert" hidden></p>
+        <p class="fine">Only summary statistics are sent to the AI writer, not your full rows.</p>
+      </form>
+    </div>
+  </section>
+
+  <section id="loading-view" class="loading" hidden aria-live="polite">
+    <div class="spin"></div>
+    <strong>Analyzing your file</strong>
+    <p class="fine">This usually takes 5 to 20 seconds. Writing the summary is the slowest part.</p>
+  </section>
+
+  <section id="result-view" hidden>
+    <div class="bar">
+      <div><h2 id="r-title"></h2><p id="r-sub"></p></div>
+      <div class="actions">
+        <a id="r-pdf" class="btn" href="#" download>Download PDF</a>
+        <button id="r-copy" class="btn ghost" type="button">Copy link</button>
+        <button id="r-new" class="btn ghost" type="button">Analyze another file</button>
+      </div>
+    </div>
+    <p id="r-lead" class="lead"></p>
+    <p id="r-source" class="source"></p>
+    <div id="r-kpis" class="kpis"></div>
+    <div id="r-charts" class="grid"></div>
+    <div class="cols">
+      <div><h3>Key findings</h3><ul id="r-findings" class="plain"></ul></div>
+      <div><h3>Recommendations</h3><ul id="r-recs" class="plain"></ul></div>
+    </div>
+    <div class="section"><h3>Data quality</h3><div class="scroll"><table id="r-quality"></table></div></div>
+    <div class="section"><h3>Notes and limits</h3><ul id="r-caveats" class="plain"></ul></div>
+    <div class="section"><details><summary>All columns</summary><div class="scroll" style="margin-top:10px"><table id="r-columns"></table></div></details></div>
+  </section>
+
+</main>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const views = { upload: $("upload-view"), loading: $("loading-view"), result: $("result-view") };
+const nf = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 2 });
+let charts = [];
+let file = null;
+
+// Build elements with textContent only, so values from the CSV can never inject HTML.
+function h(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+function show(name) { for (const k in views) views[k].hidden = k !== name; window.scrollTo(0, 0); }
+function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+
+/* ---------- upload ---------- */
+const drop = $("drop"), input = $("file"), go = $("go"), err = $("error");
+function setFile(f) {
+  err.hidden = true;
+  if (f && !f.name.toLowerCase().endsWith(".csv")) { fail("Please choose a .csv file."); f = null; }
+  file = f;
+  $("drop-title").textContent = f ? f.name : "Choose a CSV file";
+  $("drop-sub").textContent = f ? `${(f.size / 1024).toFixed(f.size > 1048576 ? 0 : 1)} KB selected. Click to change.` : "or drop it here. Up to 10 MB.";
+  go.disabled = !f;
+}
+function fail(msg) { err.textContent = msg; err.hidden = false; }
+input.addEventListener("change", () => setFile(input.files[0] || null));
+drop.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } });
+["dragenter", "dragover"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach((t) => drop.addEventListener(t, (e) => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", (e) => setFile(e.dataTransfer.files[0] || null));
+
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (!file) return;
+  const body = new FormData();
+  body.append("file", file);
+  body.append("question", $("q").value);
+  show("loading");
+  try {
+    const res = await fetch("/api/analyze", { method: "POST", body });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || "The analysis failed. Please try again.");
+    history.replaceState(null, "", "#job=" + data.job_id);
+    render(data);
+  } catch (ex) {
+    show("upload");
+    fail(ex.message);
+  }
+});
+
+$("r-new").addEventListener("click", () => {
+  history.replaceState(null, "", location.pathname);
+  charts.forEach((c) => c.destroy()); charts = [];
+  input.value = ""; setFile(null); show("upload");
+});
+$("r-copy").addEventListener("click", async () => {
+  try { await navigator.clipboard.writeText(location.href); $("r-copy").textContent = "Link copied"; }
+  catch { $("r-copy").textContent = "Copy the address bar"; }
+  setTimeout(() => ($("r-copy").textContent = "Copy link"), 2000);
+});
+
+/* ---------- render ---------- */
+function fill(list, items) { list.replaceChildren(...items.map((t) => h("li", null, t))); }
+
+function chartPanel(title, wide) {
+  const wrap = h("div", "chart" + (wide ? " wide" : ""));
+  wrap.append(h("h3", null, title));
+  const box = h("div", "box"), canvas = document.createElement("canvas");
+  box.append(canvas); wrap.append(box);
+  $("r-charts").append(wrap);
+  return canvas;
+}
+function baseOptions(extra = {}) {
+  const grid = { color: css("--rule") }, ticks = { color: css("--muted") };
+  return {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: ticks.color, maxRotation: 40, autoSkip: true } },
+      y: { grid, ticks: { color: ticks.color, callback: (v) => nf.format(v) } },
+    },
+    ...extra,
+  };
+}
+
+function render(data) {
+  const r = data.result, n = data.narrative;
+  charts.forEach((c) => c.destroy()); charts = [];
+  $("r-charts").replaceChildren();
+  const teal = css("--teal"), amber = css("--amber"), ink = css("--ink");
+
+  $("r-title").textContent = r.dataset.filename;
+  $("r-sub").textContent = data.question ? `Question: ${data.question}` : `${r.dataset.rows.toLocaleString()} rows analysed`;
+  $("r-pdf").href = data.pdf_url;
+  $("r-lead").textContent = n.executive_summary;
+  $("r-source").textContent = n.source === "ai" ? `Summary written by ${n.model}.` : "Automatic summary. Add a Groq API key on the server for an AI-written one.";
+
+  $("r-kpis").replaceChildren(...r.kpi_cards.map((k) => {
+    const d = h("div", "kpi"); const v = h("div", "v", k.value); if (k.value.length > 14) v.style.fontSize = "16px"; d.append(h("div", "l", k.label), v); return d;
+  }));
+
+  if (r.trend) {
+    const t = r.trend;
+    charts.push(new Chart(chartPanel(t.title, true), {
+      type: "line",
+      data: { labels: t.series.map((p) => p.period),
+        datasets: [{ data: t.series.map((p) => p.value), borderColor: teal, backgroundColor: teal + "22", fill: true, tension: 0.25, pointRadius: 2 }] },
+      options: baseOptions(),
+    }));
+  }
+  r.breakdowns.slice(0, 2).forEach((b) => {
+    const o = baseOptions({ indexAxis: "y" });
+    o.scales = { x: { grid: { color: css("--rule") }, ticks: { color: css("--muted"), callback: (v) => nf.format(v) } },
+                 y: { grid: { display: false }, ticks: { color: css("--muted") } } };
+    charts.push(new Chart(chartPanel(b.title), {
+      type: "bar",
+      data: { labels: b.items.slice(0, 8).map((i) => i.label), datasets: [{ data: b.items.slice(0, 8).map((i) => i.value), backgroundColor: teal }] },
+      options: o,
+    }));
+  });
+  if (r.histogram) {
+    charts.push(new Chart(chartPanel(r.histogram.title), {
+      type: "bar",
+      data: { labels: r.histogram.bins.map((b) => b.label), datasets: [{ data: r.histogram.bins.map((b) => b.count), backgroundColor: amber, categoryPercentage: 1, barPercentage: 0.9 }] },
+      options: baseOptions(),
+    }));
+  }
+  if (r.scatter) {
+    const s = r.scatter, o = baseOptions();
+    o.scales.x = { ...o.scales.x, grid: { color: css("--rule") }, title: { display: true, text: s.x, color: css("--muted") }, ticks: { color: css("--muted"), callback: (v) => nf.format(v) } };
+    o.scales.y.title = { display: true, text: s.y, color: css("--muted") };
+    charts.push(new Chart(chartPanel(`${s.title} (r = ${s.r.toFixed(2)})`), {
+      type: "scatter",
+      data: { datasets: [{ data: s.points, backgroundColor: ink + "99", pointRadius: 3 }] },
+      options: o,
+    }));
+  }
+
+  fill($("r-findings"), n.key_findings);
+  fill($("r-recs"), n.recommendations.length ? n.recommendations : ["No specific recommendations for this file."]);
+  fill($("r-caveats"), n.caveats.length ? n.caveats : ["No special limits noted."]);
+
+  // data quality table
+  const q = r.quality, rows = [["Duplicate rows", q.duplicate_rows.toLocaleString()]];
+  q.missing.slice(0, 6).forEach((m) => rows.push([`Missing values in ${m.column}`, `${m.missing.toLocaleString()} (${m.missing_pct}%)`]));
+  r.outliers.forEach((o) => rows.push([`Unusual values in ${o.column}`, `${o.count.toLocaleString()} (${o.pct}%), normal range ${nf.format(o.lower)} to ${nf.format(o.upper)}`]));
+  $("r-quality").replaceChildren(...rows.map(([a, b]) => { const tr = h("tr"); tr.append(h("td", null, a), h("td", "num", b)); return tr; }));
+
+  // column profile
+  const head = h("tr"); ["Column", "Type", "Missing", "Unique", "Summary"].forEach((c) => head.append(h("th", null, c)));
+  const body = r.columns.map((c) => {
+    let s = "";
+    if (c.kind === "numeric") s = `min ${nf.format(c.min)}, median ${nf.format(c.median)}, max ${nf.format(c.max)}`;
+    else if (c.kind === "datetime") s = `${c.min} to ${c.max}`;
+    else if (c.top) s = "Top: " + c.top.join(", ");
+    const tr = h("tr"); tr.append(h("td", null, c.name), h("td", null, c.kind), h("td", "num", `${c.missing_pct}%`), h("td", "num", c.unique.toLocaleString()), h("td", null, s));
+    return tr;
+  });
+  $("r-columns").replaceChildren(head, ...body);
+
+  show("result");
+}
+
+/* ---------- open a saved report from the link ---------- */
+(async () => {
+  const m = location.hash.match(/^#job=([0-9a-f]{32})$/);
+  if (!m) return;
+  show("loading");
+  try {
+    const res = await fetch(`/api/jobs/${m[1]}`);
+    if (!res.ok) throw new Error("This report has expired or does not exist.");
+    render(await res.json());
+  } catch (ex) { history.replaceState(null, "", location.pathname); show("upload"); fail(ex.message); }
+})();
+</script>
+</body>
+</html>
